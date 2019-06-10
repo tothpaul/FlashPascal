@@ -1,0 +1,36 @@
+program curseur;
+
+{$FRAME_WIDTH 150}
+{$FRAME_HEIGHT 100}
+
+uses
+  Flash8;
+
+type
+  TCursor = class(MovieClip)
+    constructor Create;
+    procedure onMouseMove; override;
+  end;
+
+constructor TCursor.Create;
+begin
+  inherited Create(nil, 'Cursor', 1);
+  lineStyle(1,0);
+  beginFill($ffffff);
+  lineTo(+5,+10);
+  lineTo(+10,+5);
+  lineTo(0,0);
+  Mouse.addListener(Self);
+  Mouse.Hide;
+end;
+  
+procedure TCursor.onMouseMove;
+begin
+// on prend la position de la souris relativement à _root
+  _x := _root._xmouse;
+  _y := _root._ymouse;
+end;
+
+begin
+  TCursor.Create;
+end.

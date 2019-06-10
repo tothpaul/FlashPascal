@@ -1,0 +1,108 @@
+(*
+
+ Flash Pascal sample based on :
+
+ http://www.zoneflash.net/tutoriaux/t035.php
+
+*)
+
+program DragPoly;
+
+{$FRAME_WIDTH  300}
+{$FRAME_HEIGHT 300}
+{-$FRAME_RATE    32}
+
+uses
+ Flash8;
+
+const
+  nbr   =  10;
+  cote  =   6;
+  cx    = 150;
+  cy    = 150;
+  rayon = 100;
+  xmin  =  25;
+  ymin  =  25;
+  xmax  = 275;
+  ymax  = 275;
+  PI    = 3.14159265;
+
+type
+  TSommet = class(MovieClip)
+    constructor Create(Index: Integer);
+    procedure onPress; override;
+    procedure onRelease; override;
+    procedure tracerLePolygone;
+  end;
+
+constructor TSommet.Create(Index: Integer);
+var
+  angle: Double;
+begin
+  inherited Create(nil, '', Index + 2);
+  angle := Index * 2 * PI / nbr;
+  beginFill(0);
+  moveTo(-0.5 * cote, -0.5 * cote);
+  lineTo(-0.5 * cote,  0.5 * cote);
+  lineTo( 0.5 * cote,  0.5 * cote);
+  lineTo( 0.5 * cote, -0.5 * cote);
+  lineTo(-0.5 * cote, -0.5 * cote);
+  endFill();
+  _x := Floor(cx + rayon * cos(angle));
+  _y := Floor(cy + rayon * sin(angle));
+ onReleaseOutside := onRelease;
+end;
+
+procedure TSommet.onPress;
+begin
+  startDrag(False, xmin, ymin, xmax, ymax);
+  _parent.onEnterFrame := tracerLePolygone;
+end;
+
+procedure TSommet.onRelease;
+begin
+  stopDrag();
+  _parent.onEnterFrame := nil;
+  tracerLePolygone();
+end;
+
+var
+  zone     : MovieClip;
+  i        : Integer;
+  polygone : MovieClip;
+  sommet   : array[0..9] of TSommet;
+  angle    : Double;
+
+procedure TSommet.tracerLePolygone;
+var
+  i: Integer;
+begin
+  polygone.clear();
+  polygone.lineStyle(1, $999999);
+  polygone.moveTo(sommet[0]._x, sommet[0]._y);
+  for i := 1 to nbr-1 do
+  begin
+    polygone.lineTo(sommet[i]._x, sommet[i]._y);
+  end;
+  polygone.lineTo(sommet[0]._x, sommet[0]._y);
+end;
+
+begin
+  zone := MovieClip.Create(nil, '', 0);
+  zone.lineStyle(0, 0);
+  zone.beginFill($DDDDDD);
+  zone.moveTo(xmin, ymin);
+  zone.lineTo(xmax, ymin);
+  zone.lineTo(xmax, ymax);
+  zone.lineTo(xmin, ymax);
+  zone.lineTo(xmin, ymin);
+  zone.endFill();
+
+  polygone := MovieClip.Create(nil, '', 1);
+
+  for i := 0 to nbr-1 do
+  begin
+    sommet[i] := TSommet.Create(i + 2);
+  end;
+  sommet[0].tracerLePolygone;
+end.

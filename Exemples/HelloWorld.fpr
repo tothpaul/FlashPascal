@@ -1,0 +1,27 @@
+program HelloWorld;
+
+{$FRAME_WIDTH 320}
+{$FRAME_HEIGHT 200}
+
+type
+  Number = Double;
+
+  MovieClip = external class
+  end;
+
+  TextField = external class
+    constructor Create(Parent: MovieClip; Name: string; Depth, Left, Top, Width, Height: Number) as Parent.createTextField;
+    property text: string;
+  end;
+
+
+var
+  Hello: TextField;
+  Str  : string;
+  Index: Integer;
+begin
+  Hello := TextField.Create(nil, 'Hello', 0, 0, 0, 80, 21);
+  Str := 'Hallo World !';
+  Str[2] := 'e';  // possible depuis la version 13.05.04
+  Hello.Text := Str;
+end.

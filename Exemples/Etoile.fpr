@@ -1,0 +1,54 @@
+(*
+ Flash Pascal sample based on ...
+
+http://www.zoneflash.net/tutoriaux/t033.php
+
+*)
+program Etoile;
+
+{$FRAME_WIDTH  300}
+{$FRAME_HEIGHT 300}
+
+uses
+  Flash8;
+
+type
+  TEtoile = class(MovieClip)
+    procedure tracerUneEtoile(r1, r2, n, c1, c2: Integer);
+  end;
+
+
+procedure TEtoile.tracerUneEtoile(r1, r2, n, c1, c2: Integer);
+var
+  da : Double;
+   i : Integer;
+   a : Double;
+   r : Integer;
+ x,y : Double;
+begin
+  da := Math.PI / n;
+  lineStyle(0, c1);
+  moveTo(r2, 0);
+  beginFill(c2);
+  for i := 1 to 2 * n do
+  begin
+    a := da * i;
+    if (i mod 2) = 0 then
+      r := r2
+    else
+      r := r1;
+   x := r * cos(a);
+   y := r * sin(a);
+   lineTo(x, y);
+  end;
+  endFill();
+end;
+
+var
+  Etoile: TEtoile;
+begin
+  Etoile := TEtoile.Create(nil, '', 0);
+  Etoile._x := 150;
+  Etoile._y := 150;
+  Etoile.tracerUneEtoile(75, 140, 8, $336600, $66cc00);
+end.

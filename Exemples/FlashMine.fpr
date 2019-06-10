@@ -1,0 +1,363 @@
+program FlashMine;
+
+{ Flash Pascal Mines game (c) 2008-2012 by Paul TOTH <tothpaul@free.fr> }
+
+{$FRAME_WIDTH  240}
+{$FRAME_HEIGHT 270}
+
+uses
+ Flash8;
+
+type
+  TCell = class(MovieClip)
+    State: Integer;
+    Text : TextField;
+    Count: Integer;
+    cx,cy: Integer;
+    constructor Create(Name: string; x, y: Integer);
+    procedure onRelease; override;
+    procedure Circle(radius: Integer);
+    procedure Reset;
+    procedure DoFlag;
+    procedure IsUp(NewState: Integer);
+    procedure IsDown(color: Integer);
+    procedure IsBomb(color: Integer);
+    procedure IsFlag(NewState: Integer);
+    procedure IsWrong;
+  end;
+
+  TLink = class(MovieClip)
+    constructor Create;
+    procedure onRelease; override;
+  end;
+(* Avec les objets dynamique, il n'est plus nécessaire de déclarer un objet TMatrix
+  TMatrix = class
+    matrixType: string;
+    x,y,w,h   : Double;
+    r         : Double;
+    constructor Create;
+  end;
+*)
+var
+  Cells  : array[0..15,0..15] of TCell;
+  Mines  : Integer;
+  Flags  : Integer;
+  x,y,i  : Integer;
+  link   : TLink;
+  format : TextFormat;
+  Matrix : Variant;
+  Restart: Boolean;
+  Bombs  : TextField;
+
+procedure CheckEmpty(x, y: Integer);
+begin
+  if (x >= 0)and(y >= 0)and(x < 16)and(y < 16) then
+  begin
+    if (Cells[x,y].State = 0) then
+      Cells[x, y].onRelease;
+  end;
+end;
+
+function GetState(x, y: Integer): Integer;
+begin
+  if (x < 0)or(y < 0)or(x > 15)or(y > 15) then
+    Result := 0
+  else
+    Result := Cells[x,y].State;
+end;
+
+procedure NewGame;
+var
+  x,y,i: Integer;
+begin
+  for x := 0 to 15 do
+    for y := 0 to 15 do
+      Cells[x, y].Reset;
+  i := 40;
+  format.color := $00ff00;
+  Bombs.setNewTextFormat(format);
+  Bombs.text := IntToStr(i);
+  Mines := 16 * 16;
+  Flags := 0;
+  while i > 0 do
+  begin
+    x := floor(random() * 16);
+    y := floor(random() * 16);
+    if Cells[x,y].State = 0 then
+    begin
+      Cells[x, y].State := 1;
+      Dec(i);
+    end;
+  end;
+  for x := 0 to 15 do
+    for y := 0 to 15 do
+    begin
+      Cells[x,y].Count := GetState(x-1,y-1)
+                        + GetState(x-1,y  )
+                        + GetState(x-1,y+1)
+                        + GetState(x  ,y-1)
+                        + GetState(x  ,y+1)
+                        + GetState(x+1,y-1)
+                        + GetState(x+1,y  )
+                        + GetState(x+1,y+1);
+  end;
+  Restart := False;
+end;
+
+constructor TLink.Create;
+var
+  t: TextField;
+begin
+  inherited Create(nil, 'title', -1);
+  beginFill($000080);
+  moveTo(0,0);
+  lineTo(240,0);
+  lineTo(240,15);
+  lineTo(0,15);
+  endFill;
+  t := TextField.Create(Self, 'title_caption', 0, 0, 0, 240, 15);
+  format.color := $ffffff;
+  t.setNewTextFormat(format);
+  t.text := 'MineSweeper (c)2008-2012 by Paul TOTH';
+end;
+
+procedure TLink.onRelease;
+begin
+  getURL('http://flashpascal.execute.re', '_blank');
+end;
+
+constructor TCell.Create(Name: string; x, y: Integer);
+begin
+  inherited Create(nil, Name, x + 16 * y);
+  cx := x;
+  cy := y;
+  _x := x * 15 + 7;
+  _y := y * 15 + 7 + 30;
+end;
+
+procedure TCell.onRelease;
+var
+  x,y: Integer;
+begin
+  if Restart then
+  begin
+    NewGame;
+  end else begin
+    if KeyDown(16{SHIFT}) then
+    begin
+      DoFlag;
+    end else begin
+      if State = 0 then
+      begin
+        Mines := Mines - 1;
+        IsDown($a0a0a0);
+        if Count > 0 then
+        begin
+          Text := TextField.Create(Self, IntToStr(cx) + '_' + IntToStr(cy), 0, -7, -7, 15, 15);
+          case Count of
+            1 : format.color := $0000ff;
+            2 : format.color := $008000;
+            3 : format.color := $ff00ff;
+            4 : format.color := $000080;
+            5 : format.color := $800000;
+            6 : format.color := $008080;
+            7 : format.color := $ff00ff;
+            8 : format.color := $808000;
+          end;
+          Text.setNewTextFormat(format);
+          Text.text := IntToStr(Count);
+        end else begin
+          for x := -1 to +1 do
+            for y := -1 to +1 do
+              CheckEmpty(x + cx, y + cy);
+        end;
+      end;
+      if State = 1 then
+      begin
+        Restart := True;
+        IsBomb($ff0000);
+        for x := 0 to 15 do
+          for y := 0 to 15 do
+            case Cells[x, y].State of
+              1: Cells[x, y].IsBomb($a0a0a0);
+              2: Cells[x, y].IsWrong;
+            end;
+      end;
+    end;
+  end;
+  if (Flags = 40) and (Mines = 40) then
+  begin
+    format.color := $00ff00;
+    Bombs.setNewTextFormat(format);
+    Bombs.text := 'You WIN !';
+    Restart := True;
+  end;
+end;
+
+procedure TCell.Circle(Radius: Integer);
+var
+  a    : Double;
+  c1,s1: Double;
+  c2,s2: Double;
+  r2   : Double;
+begin
+  a := 3.14/4;
+  c1 := cos(a);
+  s1 := sin(a);
+  a := 3.14/8;
+  c2 := cos(a);
+  s2 := sin(a);
+  r2 := 11 * Radius/10;
+  moveTo(0,Radius);
+  curveTo( r2*s2, r2*c2, Radius*s1, Radius*c1);
+  curveTo( r2*c2, r2*s2, Radius,0);
+  curveTo( r2*c2,-r2*s2, Radius*s1,-Radius*c1);
+  curveTo( r2*s2,-r2*c2, 0,-Radius);
+  curveTo(-r2*s2,-r2*c2,-Radius*c1,-Radius*s1);
+  curveTo(-r2*c2,-r2*s2, -Radius,0);
+  curveTo(-r2*c2, r2*s2,-Radius*c1, Radius*s1);
+  curveTo(-r2*s2, r2*c2, 0,Radius);
+end;
+
+procedure TCell.Reset;
+begin
+  if (State < 0)and(Count > 0) then Text.removeTextField();
+  IsUp(0);
+end;
+
+procedure TCell.DoFlag;
+begin
+  if (State >= 0)and(Flags < 40) then
+  begin
+    case State of
+      0: IsFlag(2);
+      1: IsFlag(3);
+      2: IsUp(0);
+      3: IsUp(1);
+    end;
+    Flags := Flags-1;
+    format.color := $00ff00;
+    Bombs.SetNewTextFormat(format);
+    Bombs.text := IntToStr(40 - Flags);
+  end;
+end;
+
+procedure TCell.IsUp(NewState: Integer);
+begin
+  State := NewState;
+  clear;
+  beginFill($c0c0c0);
+  lineStyle(1, $ffffff);
+  moveTo(-7, 7);
+  lineTo(-7,-7);
+  lineTo( 7,-7);
+  lineStyle(1, $808080);
+  lineTo( 7, 7);
+  lineTo(-7, 7);
+  endFill;
+end;
+
+procedure TCell.IsDown(color: Integer);
+begin
+  State := -1;
+  clear;
+  beginFill(color);
+  lineStyle(1,$808080);
+  moveTo(-7, 7);
+  lineTo(-7,-7);
+  lineTo( 7,-7);
+  lineStyle(1,$c0c0c0);
+  lineTo( 7, 7);
+  lineTo(-7, 7);
+  endFill;
+end;
+
+procedure TCell.IsBomb(color: Integer);
+begin
+  IsDown(color);
+  lineStyle(0,0);
+  beginGradientFill('radial',[$ffffff,0],[100,100],[0,255],Matrix);
+  circle(5);
+  endFill;
+
+  lineStyle(2,0);
+  moveTo(0, 5); lineTo(0, 6);
+  moveTo(0,-5); lineTo(0,-6);
+  moveTo( 5,0); lineTo( 6,0);
+  moveTo(-5,0); lineTo(-6,0);
+
+  lineStyle(1,0);
+  moveTo( 3.5, 3.5); lineTo( 4.5, 4.5);
+  moveTo( 3.5,-3.5); lineTo( 4.5,-4.5);
+  moveTo(-3.5,-3.5); lineTo(-4.5,-4.5);
+  moveTo(-3.5, 3.5); lineTo(-4.5, 4.5);
+end;
+
+procedure TCell.IsFlag(NewState: Integer);
+begin
+  if NewState = 2 then
+    Dec(Mines);
+  Inc(Flags, 2);
+  State := NewState;
+  lineStyle(1,0);
+  beginFill(0);
+  moveTo(0,3);
+  lineTo(-5,+5);
+  lineTo(+5,+5);
+  lineTo(0,3);
+  lineTo(0,-2);
+  endFill;
+  lineStyle(1,$ff0000);
+  beginFill($ff0000);
+  moveTo(0,-1);
+  lineTo(0,-5);
+  lineTo(-5,-3);
+  lineTo(0,-1);
+  endFill;
+end;
+
+procedure TCell.IsWrong;
+begin
+  IsDown($a0a0a0);
+  lineStyle(2,$ff0000);
+  moveTo(-5,-5);
+  lineTo(+5,+5);
+  moveTo(-5,+5);
+  lineTo(+5,-5);
+end;
+(*
+constructor TMatrix.Create;
+begin
+  matrixType := 'box';
+  x := -4.5;
+  y := -4.5;
+  w := 6;
+  h := 6;
+  r := 0;
+end;
+*)
+function AddCaption(name,text: string; depth,left,top,width,height,color,background: Integer): TextField;
+begin
+  Result := TextField.Create(nil,name,depth,left,top,width,height);
+  format.color:=color;
+  Result.setNewTextFormat(format);
+  Result.backgroundcolor:=background;
+  Result.background:=true;
+  Result.Text:=text;
+end;
+
+begin
+  format := TextFormat.Create('Tahoma',9);
+  format.bold:=true;
+  format.align:='center';
+  link := TLink.Create;
+  Bombs := AddCaption('bombs','40',-2,0,16,120,15,$00ff00,0);
+  Bombs.SetNewTextFormat(format);
+  AddCaption('help','Shift+Click for Flags',-3,120,16,120,15,0,$e0e0f0);
+
+  Matrix := [matrixType: 'box'; x:-4.5; y:-4.5; w:6; h:6; r:0]; // TMatrix.Create;
+  for x := 0 to 15 do
+    for y := 0 to 15 do
+      Cells[x, y] := TCell.Create('cell_'+IntToStr(x)+'_'+IntToStr(y),x,y);
+  NewGame;
+end.

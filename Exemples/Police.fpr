@@ -1,0 +1,110 @@
+program Police;
+
+uses
+  Flash8;
+
+{$FRAME_HEIGHT 390}
+{$FRAME_WIDTH  580}
+{$FRAME_RATE 25}
+
+// Inclure la police "Papyrus" pour afficher le texte indiqué uniquement
+{$FONT font1 'Papyrus' 'Police Papyrus intégrée et passage à la ligne 0'..'9Abc'}
+
+// Include la police "Verdana" en gras et italique pour le texte indiqué uniquement
+{$FONT font2 'Verdana' [bold, italic] 'Police Verdana intégrée et passage à la ligne 0'..'9Abc'}
+
+type
+  TTimer = class(MovieClip)
+    t: Number;
+    procedure onEnterFrame; override;
+  end;
+  
+var
+  Timer: TTimer;
+  r1,r2,r3,r4: TextField;
+  
+procedure TTimer.onEnterFrame;
+var
+  a: Number;
+begin
+  Inc(t, 10);
+  if t > 360 then
+  begin
+    a := t;
+    r1._rotation := a;
+    r2._rotation := a;
+    r3._rotation := a;
+    r4._rotation := a;
+  end;
+  if t >= 2 * 360 then
+    t := 0;
+end;
+  
+begin
+  with TextField.Create(nil, '', 1, 5, 5, Stage.width - 110, 90) do
+  begin
+    setNewTextFormat(TextFormat.Create('Papyrus', 24));
+    Text := "Police Papyrus système"#10"et passage à la ligne 0123456789";
+    Border := True;
+  end;
+  
+  r1 := TextField.Create(nil, '', 2, Stage.Width - 100, 5, 90, 90);
+  with r1 do
+  begin
+    setNewTextFormat(TextFormat.Create('Papyrus', 24));
+    Text := "Abc";
+    Border := True;
+  end;
+
+  with TextField.Create(nil, '', 3, 5, 100, Stage.width - 110, 90) do
+  begin
+    embedFonts := True;
+    setNewTextFormat(TextFormat.Create('font1', 24));
+    Text := "Police Papyrus intégrée"#10"et passage à la ligne 0123456789";
+    Border := True;
+  end;
+
+  r2 := TextField.Create(nil, '', 4, Stage.Width - 100, 100, 90, 90);
+  with r2 do
+  begin
+    embedFonts := True;
+    setNewTextFormat(TextFormat.Create('font1', 24));
+    Text := "Abc";
+    Border := True;
+  end;
+
+  with TextField.Create(nil, '', 5, 5, 195, Stage.width - 110, 90) do
+  begin
+    setNewTextFormat(TextFormat.Create('Verdana', 24, 0, True, True));
+    Text := "Police Verdana système"#10"et passage à la ligne 0123456789";
+    Border := True;
+  end;
+
+  r3 := TextField.Create(nil, '', 6, Stage.Width - 100, 195, 90, 90);
+  with r3 do
+  begin
+    setNewTextFormat(TextFormat.Create('Verdana', 24, 0, True, True));
+    Text := "Abc";
+    Border := True;
+  end;
+
+  with TextField.Create(nil, '', 7, 5, 290, Stage.width - 110, 90) do
+  begin
+    embedFonts := True;
+    setNewTextFormat(TextFormat.Create('font2', 24));
+    Text := "Police Verdana intégrée"#10"et passage à la ligne 0123456789";
+    Border := True;
+  end;
+
+  r4 := TextField.Create(nil, '', 8, Stage.Width - 100, 290, 90, 90);
+  with r4 do
+  begin
+    embedFonts := True;
+    setNewTextFormat(TextFormat.Create('font2', 24, 0, True, True));
+    Text := "Abc";
+    Border := True;
+  end;
+
+  Timer := TTimer.Create(_root, '', _root.getNextHighestDepth);
+  Timer.t := 0;
+end.

@@ -1,0 +1,43 @@
+program SystemCapabilities;
+
+{$FRAME_WIDTH 550}
+{$FRAME_HEIGHT 400}
+{$FRAME_RATE 12}
+{$BACKGROUND $FFFFFF}
+
+uses
+  Flash8;
+
+var
+  t: TextField;
+
+begin
+  t := TextField.Create(_root, 't', 1, 0, 0, 550, 400);
+  t.Text := 'avHardwareDisable = ' + BoolToStr(capabilities.avHardwareDisable) + #13 +
+            'hasAccessibility = ' + BoolToStr(capabilities.hasAccessibility) + #13 +
+            'hasAudio = ' + BoolToStr(capabilities.hasAudio) + #13 +
+            'hasAudioEncoder = ' + BoolToStr(capabilities.hasAudioEncoder) + #13 +
+            'hasEmbeddedVideo = ' + BoolToStr(capabilities.hasEmbeddedVideo) + #13 +
+            'hasIME = ' + BoolToStr(capabilities.hasIME) + #13 +
+            'hasMP3 = ' + BoolToStr(capabilities.hasMP3) + #13 +
+            'hasPrinting = ' + BoolToStr(capabilities.hasPrinting) + #13 +
+            'hasScreenBroadcast = ' + BoolToStr(capabilities.hasScreenBroadcast) + #13 +
+            'hasScreenPlayback = ' + BoolToStr(capabilities.hasScreenPlayback) + #13 +
+            'hasStreamingAudio = ' + BoolToStr(capabilities.hasStreamingAudio) + #13 +
+            'hasStreamingVideo = ' + BoolToStr(capabilities.hasStreamingVideo) + #13 +
+            'hasVideoEncoder = ' + BoolToStr(capabilities.hasVideoEncoder) + #13 +
+            'isDebugger = ' + BoolToStr(capabilities.isDebugger) + #13 +
+            'language = ' + capabilities.language + #13 +
+            'localFileReadDisable = ' + BoolToStr(capabilities.localFileReadDisable) + #13 +
+            'manufacturer = ' + capabilities.manufacturer + #13 +
+            'os = ' + capabilities.os + #13 +
+            'pixelAspectRatio = ' + FloatToStr(capabilities.pixelAspectRatio) + #13 +
+            'playerType = ' + capabilities.playerType + #13 +
+            'screenColor = ' + capabilities.screenColor + #13 +
+            'screenDPI = ' + FloatToStr(capabilities.screenDPI) + #13 +
+            'ScreenResolutionX = ' + FloatToStr(capabilities.screenResolutionX) + #13 +
+            'ScreenResolutionY = ' + FloatToStr(capabilities.screenResolutionY) + #13 +
+            'serverString = ' + capabilities.serverString + #13 +
+            'version = ' + capabilities.version;
+
+end.

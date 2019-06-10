@@ -1,0 +1,55 @@
+program WithAndSet;
+
+{$FRAME_WIDTH 550}
+{$FRAME_HEIGHT 400}
+{$FRAME_RATE 12}
+{$BACKGROUND $FFFFFF}
+
+uses
+  Flash8;
+  
+
+type
+  TValue = (vaOne = 1, vaTwo, vaThree);
+  
+  TValues = set of TValue;
+
+var
+  m: Variant;
+  v: TValues;
+  i: TValue;
+  t: TextField;
+begin
+ // with avec un objet standard, les méthodes de l'objet sont connues
+  with _root do
+  begin
+    m := createEmptyMovieClip('v', 1);
+  end;
+  
+// with avec un Variant, le préfixe "." doit être ajouté pour forcer une référence au variant
+  with m do
+  begin
+    .lineStyle(1, clRed);
+    .lineTo(200, 100);
+    .test := 'ok';
+  end;
+
+  t := TextField.Create(_root, 't', 2, 50, 0, 400, 100);
+
+ // utilisation des ensembles
+  v := [vaOne .. vaThree];
+  v := v + [vaTwo] - [vaThree];
+  v := v * [vaOne, vaTwo];
+  
+  Include(v, vaThree);
+  Exclude(v, vaOne);
+
+  for i := Low(TValue) to High(TValue) do
+    if i in v then
+     t.Text := t.Text + IntToStr(Ord(i)) + ' ';
+     
+  if vaTwo in v then
+    t.Text := t.Text + 'vaTwo';
+    
+  t.Text := t.Text + ' m.test = ' + m.test;
+end.

@@ -1,0 +1,229 @@
+program Car;
+
+{
+  FlashPascal version of Flade - Flash Dynamics Engine
+  (c)2013 Paul TOTH <contact@execute.re>
+  http://flashpascal.execute.re
+
+  Flade is written and maintained by Alec Cove.
+  http://www.cove.org/flade/
+}
+
+{$FRAME_WIDTH 600}
+{$FRAME_HEIGHT 375}
+{$FRAME_RATE 40}
+{$BACKGROUND $FFFFFF}
+
+uses
+  Flash8, FLADE;
+  
+var
+  fps: TextField;
+  startTime: Number;
+  numFrames: Integer;
+  
+type
+  CarExemple = class
+    engine    : DynamicsEngine;
+    ang       : AngularConstraint;
+    angDefault: Number;
+    
+    wheelA    : Wheel;
+    wheelB    : Wheel;
+    
+    toggleLine: LineSurface;
+    
+    constructor Create;
+    procedure Run;
+    
+    procedure toggleLineOff;
+    procedure toggleLineOn;
+  end;
+  
+constructor CarExemple.Create;
+var
+  switchLine: LineSurface;
+  switchRect: RectangleTile;
+  leftX     : Number;
+	rightX    : Number;
+	widthX    : Number;
+	midX      : Number;
+	topY      : Number;
+	rectA     : SpringBox;
+	conn      : SpringConstraint;
+	p1        : CircleParticle;
+	rp1       : RectangleParticle;
+	rp2       : RectangleParticle;
+	rp3       : RectangleParticle;
+begin
+  engine := DynamicsEngine.Create;
+  
+  engine.setDamping(1.0);
+  engine.setGravity(0.0, 0.5);
+  engine.setSurfaceBounce(0.1);
+  engine.setSurfaceFriction(0.1);
+  
+  // surfaces starting with lower left
+  engine.addSurface(RectangleTile.Create(15, 300, 20, 100));
+  
+  switchLine := LineSurface.Create(25, 350, 150, 350);
+  engine.addSurface(switchLine);
+  
+  engine.addSurface(LineSurface.Create(150, 350, 250, 300));
+	engine.addSurface(RectangleTile.Create(300, 308, 100, 15));
+	engine.addSurface(LineSurface.Create(350, 300, 460, 250));
+	engine.addSurface(RectangleTile.Create(528, 252, 135, 20));
+
+  // create the upward surface that branches, inactive to start
+  toggleLine := LineSurface.Create(220, 150, 460, 248);
+  toggleLine.setActiveState(false);
+  engine.addSurface(toggleLine);
+
+  // if the car touches the right rectangle then turn off the upward ramp
+  switchLine.onContact := toggleLineOff; {function()
+  begin
+	  toggleLine.setActiveState(false);
+  end;}
+
+  // if the car touches the right rectangle then turn on the upward ramp
+  switchRect := RectangleTile.Create(580, 217, 30, 90);
+  switchRect.onContact := toggleLineOn; {function()
+  begin
+	  toggleLine.setActiveState(true);
+  end;}
+  engine.addSurface(switchRect);
+
+  engine.addSurface(CircleTile.Create(185, 155, 35));
+	engine.addSurface(RectangleTile.Create(100, 108, 100, 15));
+	engine.addSurface(LineSurface.Create(5, 20, 5, 275));
+	engine.addSurface(CircleTile.Create(32, 195, 26));
+
+	// create the car
+	leftX := 70;
+	rightX := 130;
+	widthX := rightX - leftX;
+	midX := leftX + (widthX / 2);
+	topY := 300;
+
+  // wheels
+  wheelA := Wheel.Create(leftX, topY, 20);
+  engine.addPrimitive(wheelA);
+
+  wheelB := Wheel.Create(rightX, topY, 20);
+  engine.addPrimitive(wheelB);
+
+  // body
+  rectA := SpringBox.Create(midX, topY, widthX, 15, engine);
+
+  // wheel struts
+  conn := SpringConstraint.Create(wheelA, rectA.p3);
+  engine.addConstraint(conn);
+
+  conn := SpringConstraint.Create(wheelB, rectA.p2);
+  engine.addConstraint(conn);
+
+  conn := SpringConstraint.Create(wheelA, rectA.p0);
+  engine.addConstraint(conn);
+
+	conn := SpringConstraint.Create(wheelB, rectA.p1);
+  engine.addConstraint(conn);
+
+  // triangle top of car
+  p1 := CircleParticle.Create(midX, topY - 25, 2{, 2});
+  engine.addPrimitive(p1);
+
+  conn := SpringConstraint.Create(wheelA, p1);
+  engine.addConstraint(conn);
+
+  conn := SpringConstraint.Create(wheelB, p1);
+  engine.addConstraint(conn);
+
+	// angular constraint for triangle top
+	ang := AngularConstraint.Create(wheelA, p1, wheelB);
+	engine.addConstraint(ang);
+	angDefault := ang.targetTheta;
+
+  // trailing body
+  rp1 := RectangleParticle.Create(midX, topY - 20, 1, 1);
+  engine.addPrimitive(rp1);
+
+  conn := SpringConstraint.Create(p1, rp1);
+  conn.setRestLength(7);
+  engine.addConstraint(conn);
+
+  rp2 := RectangleParticle.Create(midX, topY - 10, 1, 1);
+  engine.addPrimitive(rp2);
+
+  conn := SpringConstraint.Create(rp1, rp2);
+  conn.setRestLength(7);
+  engine.addConstraint(conn);
+
+  rp3 := RectangleParticle.Create(midX, topY - 5, 7, 7);
+  engine.addPrimitive(rp3);
+
+  conn := SpringConstraint.Create(rp2, rp3);
+  conn.setRestLength(7);
+  engine.addConstraint(conn);
+
+  // no need to redraw surfaces
+  engine.paintSurfaces();
+end;
+
+procedure CarExemple.toggleLineOff;
+begin
+  toggleLine.setActiveState(false);
+end;
+
+procedure CarExemple.toggleLineOn;
+begin
+  toggleLine.setActiveState(true);
+end;
+
+const
+  KeySpeed = 2.0;
+procedure CarExemple.Run;
+//const
+//  KeySpeed = 2.0;
+begin
+  if Key.isDown(Key.LEFT) then
+  begin
+    wheelA.rp.vs := - KeySpeed;
+    wheelB.rp.vs := - KeySpeed;
+  end else
+  if Key.isDown(Key.RIGHT) then
+  begin
+    wheelA.rp.vs := + KeySpeed;
+    wheelB.rp.vs := + KeySpeed;
+  end else
+  begin
+    wheelA.rp.vs := 0;
+    wheelB.rp.vs := 0;
+  end;
+  
+  if Key.isDown(Key.UP) then
+  begin
+    if ang.targetTheta < 2.5 then
+      ang.targetTheta := ang.targetTheta + 0.1;
+  end else begin
+    if ang.targetTheta > angDefault then
+      ang.targetTheta := ang.targetTheta - 0.1;
+  end;
+
+  engine.timeStep();
+  engine.paintPrimitives();
+  engine.paintConstraints();
+  
+	Inc(numFrames);
+	fps.Text := 'FPS: ' + FloatToStr(Math.Round(numFrames / ((getTimer() - startTime) / 1000)));
+end;
+
+var
+  c  : CarExemple;
+begin
+  c := CarExemple.Create;
+  fps := TextField.Create(_root, 'fps', _root.getNextHighestDepth(), 0, 0, 100, 21);
+  fps.Text := 'FPS: 40';
+  startTime := getTimer();
+  numFrames := 0;
+  _root.onEnterFrame := c.Run;
+end.

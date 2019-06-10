@@ -1,0 +1,71 @@
+program MouseWheel;
+
+{$FRAME_WIDTH 550}
+{$FRAME_HEIGHT 400}
+{$FRAME_RATE 12}
+{$BACKGROUND $FFFFFF}
+
+uses
+  Flash8;
+
+type
+  TScroller = class
+    constructor Create;
+    procedure onMouseWheel(Delta: Number; target: Variant);
+  end;
+  
+  TScrollClip = class(MovieClip)
+    LineY: Number;
+    constructor Create(parent: MovieClip; x, y: Integer);
+    procedure Draw;
+    procedure onMouseWheel(Delta: Number);
+  end;
+  
+constructor TScroller.Create;
+begin
+  Mouse.addListener(Self);
+end;
+
+procedure TScroller.onMouseWheel(Delta: Number; Target: Variant);
+begin
+  Target.onMouseWheel(Delta);
+end;
+  
+constructor TScrollClip.Create(parent: MovieClip; x, y: Integer);
+begin
+  inherited Create(parent, '', parent.getNextHighestDepth());
+  _x := x;
+  _y := y;
+  Draw();
+end;
+
+procedure TScrollClip.Draw();
+begin
+  clear;
+  beginFill($ff0000);
+  moveTo(0,   0);
+  lineTo(50,  0);
+  lineTo(50,100);
+  lineTo( 0,100);
+  endFill;
+  lineStyle(1, $0000ff);
+  moveTo(0, LineY);
+  lineTo(50,LineY);
+end;
+
+procedure TScrollClip.onMouseWheel(Delta: Number);
+begin
+  LineY := LineY - Delta;
+  if LineY < 0 then
+    LineY := 0
+  else
+  if LineY > 100 then
+    LineY := 100;
+  Draw();
+end;
+
+begin
+  TScroller.Create;
+  TScrollClip.Create(_root, 10, 40);
+  TScrollClip.Create(_root, 80, 40);
+end.

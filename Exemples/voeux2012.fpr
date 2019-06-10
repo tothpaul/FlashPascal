@@ -1,0 +1,22 @@
+program voeux2012;
+
+uses
+  Flash8;
+
+{$FRAME_WIDTH 520}
+{$FRAME_HEIGHT 366}
+{$JPEG img 'voeux2012.jpg'}
+
+var
+  b: BitmapData;
+begin
+   b:=BitmapData.create(520,366);
+   b:= loadBitmap('img');
+  _root.beginBitmapFill(b);
+  _root.moveto(0,0);
+  _root.lineto(520, 0);
+  _root.lineto(520,366);
+  _root.lineto(0, 366);
+  _root.lineto(0,0);
+  _root.EndFill();
+end.

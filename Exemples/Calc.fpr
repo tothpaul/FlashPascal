@@ -1,0 +1,193 @@
+program Calc;
+
+{ Flash Pascal sample (c)2008 by Paul TOTH <tothpaul@free.fr> }
+
+{
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+}
+
+
+// Frame size and rate
+{$FRAME_WIDTH  200}
+{$FRAME_HEIGHT 150}
+{$FRAME_RATE    32}
+{$BACKGROUND $7f7fff} // $rrggbb
+
+uses
+ Flash8;
+
+type
+  TMovieClip = class(MovieClip)
+    edit : TextField;
+    item : Integer;
+    constructor Create(Depth, Deux: Integer);
+    procedure onRelease; override;
+    procedure Add(number: Integer);
+    procedure SetAction(number: Integer);
+    procedure DoAction();
+  end;
+
+  TDisplay = class(MovieClip)
+    edit : TextField;
+    fmt  : TextFormat;
+    constructor Create(Depth: Integer);
+    procedure SetValue(number: Integer);
+    procedure SetAccum(number: Integer);
+  end;
+
+var
+ fmt    : TextFormat;
+ buttons: array[0..23] of TMovieClip;
+ i      : Integer;
+ display: TDisplay;
+
+ MC     : Integer;
+ Value  : Integer;
+ Accum  : Integer;
+ Action : Integer;
+ Todo   : Integer;
+
+constructor TMovieClip.Create(Depth, Deux: Integer);
+var
+  s: string;
+begin
+  inherited Create(nil, '', Depth + 1);
+  item := Depth;
+  beginFill($c0c0c0);
+  lineStyle(1, $e0e0e0);
+  moveTo(  0, 20);
+  lineTo(  0,  0);
+  lineTo( 25,  0);
+  lineStyle(1, $808080);
+  lineTo( 25, 20);
+  lineTo(  0, 20);
+  _x := 10 + 30 * (item mod 6);
+  _y := 35 + 25 * (item div 6);
+  edit := TextField.Create(Self, '', 0, 0, 0, 25, 20);
+  edit.setNewTextFormat(fmt);
+  s := 'c789/Rr456*%s123-xm0?,+=';
+  s := Copy(s, item + 1, 1);
+  case s of
+   'c' : s := 'MC';
+   'r' : s := 'MR';
+   's' : s := 'MS';
+   'm' : s := 'M+';
+   'R' : s := 'Sqrt';
+   'x' : s := '1/x';
+   '?' : s := '+/-';
+  end;
+
+  edit.Text := s;
+end;
+
+procedure TMovieClip.onRelease;
+begin
+  case item of
+   0 : MC:=0;
+   1 : Add(7);
+   2 : Add(8);
+   3 : Add(9);
+   4 : SetAction(4); // div
+   7 : Add(4);
+   8 : Add(5);
+   9 : Add(6);
+  10 : SetAction(3); // *
+  13 : Add(1);
+  14 : Add(2);
+  15 : Add(3);
+  19 : Add(0);
+  16 : SetAction(2); // -
+  22 : SetAction(1); // +
+  23 : DoAction();
+  else display.edit.text := edit.text + ' not yet implemented';
+  end;
+end;
+
+procedure TMovieClip.Add(Number: Integer);
+begin
+  Todo := Action;
+  display.SetValue(10 * Value + Number);
+end;
+
+procedure TMovieClip.SetAction(number: Integer);
+begin
+  DoAction();
+  Action := number;
+  Value := 0;
+end;
+
+procedure TMovieClip.DoAction();
+begin
+  case Todo of
+   0 : display.SetAccum(Value);
+   1 : display.SetAccum(Accum + Value);
+   2 : display.SetAccum(Accum - Value);
+   3 : display.SetAccum(Accum * Value);
+   4 : display.SetAccum(Accum div Value);
+ end;
+  Todo := 0;
+end;
+
+constructor TDisplay.Create(Depth: Integer);
+begin
+  inherited Create(nil, '', Depth);
+  beginFill($ffffff);
+  lineStyle(1,$e0e0e0);
+  moveTo(  0, 20);
+  lineTo(  0,  0);
+  lineTo(175,  0);
+  lineStyle(1,$808080);
+  lineTo(175, 20);
+  lineTo(  0, 20);
+  _x:=10;
+  _y:=10;
+  edit := TextField.Create(Self, '', 0, 0, 0, 175, 20);
+  fmt := TextFormat.Create('Tahoma', 9);
+  fmt.align := 'right';
+  fmt.bold := True;
+  edit.setNewTextFormat(fmt);
+  edit.Text := '0';
+end;
+
+procedure TDisplay.SetValue(number: Integer);
+begin
+  Value := number;
+  edit.text := IntToStr(Value);
+end;
+
+procedure TDisplay.SetAccum(number: Integer);
+begin
+  Accum:=Number;
+  SetValue(Accum);
+  Value := 0;
+  Action := 0;
+end;
+
+begin
+  fmt := TextFormat.Create('Tahoma', 9);
+  fmt.color := $1f1fff;
+  fmt.align := 'center';
+  fmt.bold := True;
+
+  display := TDisplay.Create(0);
+  for i := 0 to 23 do
+  begin
+    buttons[i] := TMovieClip.Create(i, 50 + i);
+  end;
+
+  Value  := 0;
+  Accum  := 0;
+  Action := 0; // no action
+end.

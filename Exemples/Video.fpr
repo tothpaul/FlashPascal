@@ -1,0 +1,67 @@
+program Video;
+
+uses
+  Flash8;
+
+{$FRAME_WIDTH 640}
+{$FRAME_HEIGHT 400}
+
+// Flash 8 ne permet pas d'instancier l'objet Video par programme
+// la directive de compilation $VIDEO permet de contourner ce problème
+// l'objet est créé statiquement avant le lancement du programme
+// il ne reste plus qu'à déclarer une variable "external" pour l'utiliser.
+{$VIDEO name="my_video" depth="2" left="0" top="40" width="320" height="180"}
+
+(* syntaxe plus compacte équivalente
+  {$VIDEO my_video 2 0 20 320 180}
+*)
+
+type
+  MyNetStream = class(NetStream)
+    procedure onStatus(infoObject: TInfoObject); override;
+    procedure onMetaData(infoObject: TMetaData); override;
+  end;
+  
+var
+  tf: TextField;
+  md: TextField;
+  nc: NetConnection;
+  ns: MyNetStream;
+  vo: Video external 'my_video';
+
+procedure MyNetStream.onStatus(infoObject: TInfoObject);
+begin
+  tf.Text := infoObject.level + ' : ' + infoObject.code;
+  if infoObject.code = 'NetStream.Buffer.Empty' then
+    ns.play('Execute.re.flv');
+end;
+
+procedure MyNetStream.onMetaData(infoObject: TMetaData);
+begin
+  md.Text := ' codec=' + FloatToStr(infoObject.videocodecid)
+           + ',framerate=' + FloatToStr(infoObject.framerate)
+           + ',videodatarate=' + FloatToStr(infoObject.videodatarate)
+           + ',height=' + FloatToStr(infoObject.height)
+           + ',width=' + FloatToStr(infoObject.width)
+           + ',duration=' + FloatToStr(infoObject.duration);
+end;
+
+begin
+  tf := TextField.Create(_root, 'tf', 0, 0, 0, Stage.Width, 20);
+  md := TextField.Create(_root, 'md', 1, 0,20, Stage.Width, 20);
+
+  nc := NetConnection.Create;
+  nc.connect(nil);
+
+  ns := MyNetStream.Create(nc);
+
+  vo.attachVideo(ns);
+  vo._xscale := 200;
+  vo._yscale := 200;
+  
+// accès http
+//ns.play('http://flashpascal.execute.re/Execute.re.flv');
+
+// accès local
+  ns.play('Execute.re.flv');
+end.

@@ -1,0 +1,65 @@
+program VariantDemo;
+
+{$FRAME_WIDTH 550}
+{$FRAME_HEIGHT 400}
+{$FRAME_RATE 12}
+{$BACKGROUND $FFFFFF}
+
+(*
+
+  Le type Variant est très similaire au type OleVariant de Delphi
+
+  attention, les méthodes d'un variant sont sensibles à la case !
+  
+  les parenthèses sont obligatoires pour invoquer une méthode,
+  même si elle ne possède pas de paramètres.
+
+*)
+
+var
+  _root: Variant external;  // Notez que cette exemple n'utilise pas l'unité Flash8 !
+  Clip : Variant;
+  Str  : string;
+  
+  org  : Variant;
+
+begin
+  Clip := _root.createEmptyMovieClip('test', 1);
+
+  // accès par nom
+  Clip['color'] := $ff0000;
+
+  // accès par nom plus complexe
+  Str := 'co';
+  Clip['col' + 'or'] := Clip[Str + 'lor'] or $FF;
+
+  // accès par membre
+  Clip.beginFill(Clip.color);
+
+  Clip.lineTo(100,  0);
+  Clip.lineTo(100,100);
+  Clip.lineTo(  0,100);
+  Clip.endFill();  // avec parenthèses, sinon c'est un membre !
+  
+  // création dynamique d'un objet
+  org := [x: 100; y: 100];
+  {
+  // équivalent au code ci-dessous !
+  type
+    TOrg = class
+      x, y: Integer;
+    end;
+  var
+    org: TOrg;
+  begin
+    org := TOrg.Create;
+    org.x := 100;
+    org.y := 100;
+  end;
+    
+  }
+
+  Clip._x := org.x;
+  Clip._y := org['y'];
+  Clip._rotation := 30;
+end.

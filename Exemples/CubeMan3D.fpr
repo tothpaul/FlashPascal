@@ -1,0 +1,566 @@
+program CubeMan3D;
+
+{$FRAME_WIDTH 512}
+{$FRAME_HEIGHT 512}
+{$FRAME_RATE 25}
+{$BACKGROUND $f0f0f0}
+
+uses
+  Flash8;
+
+type
+  TPoint3D = array[0..2] of Double; // x, y, Z
+  TPoint5D = array[0..4] of Double; // x, y, z, x2d, y2d
+  
+  TMatrixData = array[0..15] of Double;
+  TMatrix3d = class
+    Values: TMatrixData;
+    M     : TMatrixData;
+    V     : TMatrixData;
+    x,y,z : Double;
+    x2d   : Double;
+    y2d   : Double;
+    constructor Create;
+    procedure Reset();
+    procedure Mult();
+    procedure Assign(M: TMatrix3d);
+    procedure Combine(M: TMatrix3d);
+    procedure Translate(tx, ty, tz: Double);
+    procedure RotateX(A: Double);
+    procedure RotateY(A: Double);
+    procedure RotateZ(A: Double);
+    procedure Transform(P1: TPoint3D; P2: TPoint5D);
+    procedure Save(var Data: TMatrixData);
+    procedure Load(Data: TMatrixData);
+  end;
+
+
+constructor TMatrix3d.Create;
+var
+  i: Integer;
+begin
+  for i := 0 to 15 do
+    M[i] := 0;
+  M[ 0] := 1;
+  M[ 5] := 1;
+  M[10] := 1;
+  M[15] := 1;
+  Reset();
+end;
+
+procedure TMatrix3d.Reset;
+var
+  i: Integer;
+begin
+  for i := 0 to 15 do
+    Values[i] := M[i]
+end;
+
+procedure TMatrix3d.Mult();
+var
+  i, j: Integer;
+begin
+  for i := 0 to 3 do
+    for j := 0 to 3 do
+      V[4 * i + j] := M[4 * i    ] * Values[     j]
+                    + M[4 * i + 1] * Values[ 4 + j]
+                    + M[4 * i + 2] * Values[ 8 + j]
+                    + M[4 * i + 3] * Values[12 + j];
+  for i := 0 to 15 do
+    Values[i] := V[i];
+end;
+
+procedure TMatrix3d.Assign(M: TMatrix3d);
+var
+  i: Integer;
+begin
+  for i := 0 to 15 do
+    Values[i] := M.Values[i];
+end;
+
+procedure TMatrix3d.Combine(M: TMatrix3D);
+var
+  i, j: Integer;
+begin
+  for i := 0 to 3 do
+    for j := 0 to 3 do
+      V[4 * i + j] := M.Values[4 * i    ] * Values[     j]
+                    + M.Values[4 * i + 1] * Values[ 4 + j]
+                    + M.Values[4 * i + 2] * Values[ 8 + j]
+                    + M.Values[4 * i + 3] * Values[12 + j];
+  for i := 0 to 15 do
+    Values[i] := V[i];
+end;
+
+procedure TMatrix3d.Translate(tx, ty, tz: Double);
+begin
+  M[12] := tx;
+  M[13] := ty;
+  M[14] := tz;
+  Mult();
+  M[12] := 0;
+  M[13] := 0;
+  M[14] := 0;
+end;
+
+procedure TMatrix3d.RotateX(A: Double);
+begin
+  if A <> 0 then
+  begin
+    M[ 5] := cos(a);
+    M[ 6] :=-sin(a);
+    M[ 9] :=-M[6];
+    M[10] := M[5];
+    Mult();
+    M[ 5] := 1;
+    M[ 6] := 0;
+    M[ 9] := 0;
+    M[10] := 1;
+  end;
+end;
+
+procedure TMatrix3d.RotateY(A: Double);
+begin
+  if A <> 0 then
+  begin
+    M[ 0] := cos(a);
+    M[ 2] := sin(a);
+    M[ 8] :=-M[2];
+    M[10] := M[0];
+    Mult();
+    M[ 0] := 1;
+    M[ 2] := 0;
+    M[ 8] := 0;
+    M[10] := 1;
+  end;
+end;
+
+procedure TMatrix3d.RotateZ(A: Double);
+begin
+  if A <> 0 then
+  begin
+    M[ 0] := cos(a);
+    M[ 1] :=-sin(a);
+    M[ 4] :=-M[1];
+    M[ 5] := M[0];
+    Mult();
+    M[ 0] := 1;
+    M[ 1] := 0;
+    M[ 4] := 0;
+    M[ 5] := 1;
+  end;
+end;
+
+procedure TMatrix3d.Transform(P1: TPoint3D; P2: TPoint5D);
+var
+  Z: Number;
+begin
+  P2[0] := P1[0] * Values[0] + P1[1] * Values[4] + P1[2] * Values[ 8] + Values[12];
+  P2[1] := P1[0] * Values[1] + P1[1] * Values[5] + P1[2] * Values[ 9] + Values[13];
+  P2[2] := P1[0] * Values[2] + P1[1] * Values[6] + P1[2] * Values[10] + Values[14];
+
+  Z := 512 / P2[2];
+  
+  P2[3] := Z * P2[0];
+  P2[4] := Z * P2[1];
+end;
+
+procedure TMatrix3D.Save(var Data: TMatrixData);
+var
+  i: Integer;
+begin
+  for i := 0 to 15 do
+    Data[i] := Values[i];
+end;
+
+procedure TMatrix3D.Load(Data: TMatrixData);
+var
+  i: Integer;
+begin
+  for i := 0 to 15 do
+    Values[i] := Data[i];
+end;
+
+type
+  TCube = class
+    Points: array[0..14] of TPoint3D; // 8 sommets + 6 centres de face + le centre du cube
+    Trans : array[0..14] of TPoint5D; // poins transformés
+    Faces : array[0..5, 0..4] of Integer; // 6 face,  4 points + 1 centre
+    constructor Create(Width, Height, Depth: Integer);
+    procedure Transform(Matrix: TMatrix3D);
+    procedure RenderFace(Canvas: MovieClip; Index: Integer);
+    function IsVisible(p1, p2: TPoint5D): Number;
+    function GetDepth(Face: Integer): Number;
+  end;
+
+  TCubeMan = class(MovieClip)
+  private
+    Timer : Integer;
+    Cubes : array[0..9] of TCube;
+    ZOrder: array[0..(10 * 6) - 1] of Integer; // Ensemble des faces de tous les cubes
+    Root  : TMatrix3d;
+    Rotate: TMatrix3d;
+    Matrix: TMatrix3d;
+    FMouseDown: Boolean;
+    FMouseX   : Number;
+    FMouseY   : Number;
+    procedure onMouseDown; override;
+    procedure onMouseUp; override;
+    procedure QuickSort(L, R: Integer);
+    function GetDepth(Face: Integer): Number;
+  public
+    constructor Create;
+    procedure onEnterFrame; override;
+  end;
+  
+
+constructor TCube.Create(Width, Height, Depth: Integer);
+var
+  Index: Integer;
+begin
+  Points[0, 0] := -Width;
+  Points[0, 1] := +Height;
+  Points[0, 2] := +Depth;
+  
+  Points[1, 0] := +Width;
+  Points[1, 1] := +Height;
+  Points[1, 2] := +Depth;
+
+  Points[2, 0] := +Width;
+  Points[2, 1] := -Height;
+  Points[2, 2] := +Depth;
+
+  Points[3, 0] := -Width;
+  Points[3, 1] := -Height;
+  Points[3, 2] := +Depth;
+  
+  for Index := 0 to 3 do
+  begin
+    Points[Index + 4, 0] :=   Points[Index, 0];
+    Points[Index + 4, 1] :=   Points[Index, 1];
+    Points[Index + 4, 2] := - Points[Index, 2];
+  end;
+  
+  Points[8, 0] := 0;
+  Points[8, 1] := 0;
+  Points[8, 2] := +1;
+
+  Points[9, 0] := 0;
+  Points[9, 1] := 0;
+  Points[9, 2] := -1;
+
+  Points[10, 0] := +1;
+  Points[10, 1] := 0;
+  Points[10, 2] := 0;
+
+  Points[11, 0] := -1;
+  Points[11, 1] := 0;
+  Points[11, 2] := 0;
+
+  Points[12, 0] := 0;
+  Points[12, 1] := +1;
+  Points[12, 2] := 0;
+
+  Points[13, 0] := 0;
+  Points[13, 1] := -1;
+  Points[13, 2] := 0;
+
+  Points[14, 0] := 0;
+  Points[14, 1] := 0;
+  Points[14, 2] := 0;
+
+  Faces[0, 0] := 0;
+  Faces[0, 1] := 1;       //    4....5             y
+  Faces[0, 2] := 2;       //  / :   /|             |_ x
+  Faces[0, 3] := 3;       // 0-----1 |            /
+  Faces[0, 4] := 8;       // |  7  | 6           z
+                          // |.    |/
+                          // 3-----2
+  Faces[1, 0] := 5;
+  Faces[1, 1] := 4;
+  Faces[1, 2] := 7;
+  Faces[1, 3] := 6;
+  Faces[1, 4] := 9;
+
+  Faces[2, 0] := 1;
+  Faces[2, 1] := 5;
+  Faces[2, 2] := 6;
+  Faces[2, 3] := 2;
+  Faces[2, 4] :=10;
+
+  Faces[3, 0] := 4;
+  Faces[3, 1] := 0;
+  Faces[3, 2] := 3;
+  Faces[3, 3] := 7;
+  Faces[3, 4] :=11;
+
+  Faces[4, 0] := 4;
+  Faces[4, 1] := 5;
+  Faces[4, 2] := 1;
+  Faces[4, 3] := 0;
+  Faces[4, 4] :=12;
+
+  Faces[5, 0] := 2;
+  Faces[5, 1] := 3;
+  Faces[5, 2] := 7;
+  Faces[5, 3] := 6;
+  Faces[5, 4] :=13;
+end;
+
+procedure TCube.Transform(Matrix: TMatrix3d);
+var
+  Index: Integer;
+begin
+  for Index := 0 to 14 do
+  begin
+    Matrix.Transform(Points[Index], Trans[Index]);
+  end;
+end;
+
+function TCube.GetDepth(Face: Integer): Number;
+begin
+  Result := Trans[Faces[Face, 4], 2]; // Position Z du centre de la face
+end;
+
+procedure TCube.RenderFace(Canvas: MovieClip; Index: Integer);
+var
+  a,b,c,d,e: Integer;
+  dot: Number;
+begin
+  e := Faces[Index, 4];
+  dot := IsVisible(Trans[14], Trans[e]);
+  if dot > 0 then
+  begin
+    a := Faces[Index, 0];
+    b := Faces[Index, 1];
+    c := Faces[Index, 2];
+    d := Faces[Index, 3];
+    Canvas.BeginFill(32+dot);
+    Canvas.moveTo(Trans[a, 3], Trans[a, 4]);
+    Canvas.lineTo(Trans[b, 3], Trans[b, 4]);
+    Canvas.lineTo(Trans[c, 3], Trans[c, 4]);
+    Canvas.lineTo(Trans[d, 3], Trans[d, 4]);
+    Canvas.endFill;
+  end;
+end;
+
+function TCube.IsVisible(p1, p2: TPoint5D): Number;
+var
+  x1,y1,z1 : Double;
+  x2,y2,z2 : Double;
+  dot      : Double;
+begin
+  x1 := p1[0];  // Centre du cube
+  y1 := p1[1];
+  z1 := p1[2];
+
+  x2 := x1 - p2[0]; // Vecteur normal de la face
+  y2 := y1 - p2[1];
+  z2 := z1 - p2[2];
+
+  Result := x1 * x2 + y1 * y2 + z1 * z2;
+end;
+
+
+constructor TCubeMan.Create;
+var
+  Index: Integer;
+begin
+  inherited Create(_root, 'CubeMan', _root.getNextHighestDepth);
+  _x := Stage.width / 2;
+  _y := Stage.height / 2;
+
+  Rotate := TMatrix3d.Create;
+
+  Root := TMatrix3d.Create;
+  Root.RotateX(-Math.PI/8);
+  Root.RotateY( Math.PI/4);
+
+  Matrix := TMatrix3d.Create;
+
+
+  Cubes[0] := TCube.Create(10, 17, 15);
+  Cubes[1] := TCube.Create(10, 10, 10);
+
+  Cubes[2] := TCube.Create(6, 6, 10);
+  Cubes[3] := TCube.Create(6, 6, 10);
+
+  Cubes[4] := TCube.Create(6, 6, 10);
+  Cubes[5] := TCube.Create(6, 6, 10);
+
+  Cubes[6] := TCube.Create(6, 10, 6);
+  Cubes[7] := TCube.Create(6, 10, 6);
+
+  Cubes[8] := TCube.Create(6, 10, 6);
+  Cubes[9] := TCube.Create(6, 10, 6);
+  
+  for Index := 0 to High(ZOrder) do
+    ZOrder[Index] := Index;
+
+end;
+
+procedure TCubeMan.onMouseDown;
+begin
+  FMouseDown := True;
+  FMouseX := _xmouse;
+  FMouseY := _ymouse;
+end;
+
+procedure TCubeMan.onMouseUp;
+begin
+  FMouseDown := False;
+end;
+
+function TCubeMan.GetDepth(Face: Integer): Number;
+begin
+ // Retourne la profondeur d'une face d'un cube
+  Result := Cubes[Face mod 10].GetDepth(Face div 10);
+end;
+
+procedure TCubeMan.QuickSort(L, R: Integer);
+var
+  I, J, P, T: Integer;
+  Z: Number;
+begin
+  repeat
+    I := L;
+    J := R;
+    P := (L + R) shr 1;
+    repeat
+      Z := GetDepth(ZOrder[P]);
+      while GetDepth(ZOrder[I]) > Z do Inc(I);
+      while GetDepth(ZOrder[J]) < Z do Dec(J);
+      if I <= J then
+      begin
+        T := ZOrder[I];
+        ZOrder[I] := ZOrder[J];
+        ZOrder[J] := T;
+        if P = I then
+          P := J
+        else if P = J then
+          P := I;
+        Inc(I);
+        Dec(J);
+      end;
+    until I > J;
+    if L < J then QuickSort(L, J);
+    L := I;
+  until I >= R;
+end;
+
+const
+  k = 0; // délai entre deux animations de course
+  
+procedure TCubeMan.onEnterFrame;
+var
+  Data : TMatrixData;
+  Index: Integer;
+  Loop : Integer;
+begin
+  Timer := Timer + 30;
+  if Timer > 8600 then
+    Dec(Timer, 8600);
+
+  if FMouseDown then
+  begin
+    Matrix.Reset();
+    Matrix.RotateY( Math.PI * (_xmouse - FMouseX)/180);
+    Matrix.RotateX(-Math.PI * (_ymouse - FMouseY)/180);
+    Matrix.Combine(Rotate);
+    Rotate.Assign(Matrix);
+    FMouseX := _xmouse;
+    FMouseY := _ymouse;
+  end;
+
+  Matrix.Reset();
+  Matrix.Translate(0, -10, 150);
+  Matrix.Combine(Rotate);
+  Matrix.Combine(Root);
+
+  Clear();
+  
+
+  // Sauvegarde de la matrice
+  Matrix.save(Data);
+  // Le buste
+   Cubes[0].Transform(Matrix);
+  // Remonter vers la tête
+    Matrix.Translate(0, -30, 0);
+    Cubes[1].Transform(Matrix);
+  // Revenir au buste
+  Matrix.Load(Data);
+  // Déplacement vers l'épaule
+    Matrix.Translate(0, -15, 33-10);
+  // Rotation à 90°
+    Matrix.RotateX(Math.PI/2);
+  // Animation du bras, rotation de 80° +/- 160°
+    if Timer > k then
+      Matrix.RotateY((Abs((Timer div 3) mod 320 - 160) - 80) * Math.PI/180);
+  // Recentrer le bras sur l'axe de rotation
+    Matrix.Translate(0, 0, +10);
+    Cubes[2].Transform(Matrix);
+  // On passe à l'avant-bras
+    Matrix.Translate(0, 0, 25-10);
+  // Animation de l'avant bras de +/- 90°
+    if Timer > k then
+      Matrix.RotateY((Abs((Timer div 3) mod 180 - 90)) * Math.PI/180);
+  // Recenter l'axe de rotation
+    Matrix.Translate(0, 0, +10);
+    Cubes[3].Transform(Matrix);
+  // On revient au buste
+  Matrix.Load(Data);
+  // Même chose pour l'autre bras
+    Matrix.Translate(0, -15, 10-33);
+    Matrix.RotateX(-Math.PI/2);
+    if Timer > k then
+      Matrix.RotateY((Abs((Timer div 3) mod 320 - 160) - 80) * Math.PI/180);
+    Matrix.Translate(0, 0, -10);
+    Cubes[4].Transform(Matrix);
+    Matrix.Translate(0, 0, 10-25);
+    if Timer > k then
+      Matrix.RotateY(-(Abs((Timer div 3) mod 180 - 90)) * Math.PI/180);
+    Matrix.Translate(0, 0, -10);
+    Cubes[5].Transform(Matrix);
+  // On revient au buste
+  Matrix.Load(Data);
+  // Première jambe
+    Matrix.Translate(0, 30-10, 10);
+    if Timer > k then
+      Matrix.RotateZ((Abs((Timer div 4) mod 240 - 120) - 60) * Math.PI/180);
+    Matrix.Translate(0, +10, 0);
+    Cubes[6].Transform(Matrix);
+    Matrix.Translate(0, 25-10, 0);
+    if Timer > k then
+       Matrix.RotateZ((1-((Timer div 2) mod 480) div 240) * (120 -  Abs((Timer div 2) mod 240 - 120)) * Math.PI/180);
+    Matrix.Translate(0, +10, 0);
+    Cubes[8].Transform(Matrix);
+  Matrix.Load(Data);
+  // Seconde jambe
+    Matrix.Translate(0, 30-10, -10);
+    if Timer > k then
+       Matrix.RotateZ(-(Abs((Timer div 4) mod 240 - 120) - 60) * Math.PI/180);
+    Matrix.Translate(0, +10, 0);
+    Cubes[7].Transform(Matrix);
+    Matrix.Translate(0, 25-10, 0);
+    if Timer > k then
+       Matrix.RotateZ((((Timer div 2) mod 480) div 240) * (120 -  Abs((Timer div 2) mod 240 - 120)) * Math.PI/180);
+    Matrix.Translate(0, +10, 0);
+    Cubes[9].Transform(Matrix);
+  // Restaurer la matrice pour le prochain rendu
+  Matrix.load(Data);
+  
+  // Trier les cubes en Z selon le centre
+  QuickSort(0, High(ZOrder));
+  
+  // Dessiner les faces de la plus éloignée à la plus proche
+  lineStyle(1, $ff);
+  for Loop := 0 to High(ZOrder) do
+  begin
+    Index := ZOrder[Loop];
+    Cubes[Index mod 10].RenderFace(Self, Index div 10);
+  end;
+end;
+  
+begin
+  TCubeMan.Create();
+end.

@@ -1,0 +1,164 @@
+program Mesh;
+
+{
+  FlashPascal version of Flade - Flash Dynamics Engine
+  (c)2013 Paul TOTH <contact@execute.re>
+  http://flashpascal.execute.re
+
+  Flade is written and maintained by Alec Cove.
+  http://www.cove.org/flade/
+}
+
+{$FRAME_WIDTH 600}
+{$FRAME_HEIGHT 375}
+{$FRAME_RATE 40}
+{$BACKGROUND $FFFFFF}
+
+uses
+  Flash8, FLADE;
+
+var
+  fps: TextField;
+  startTime: Number;
+  numFrames: Integer;
+
+type
+  MeshExample = class
+  private
+    engine: DynamicsEngine;
+    isDrag: Boolean;
+  public
+    constructor Create;
+    procedure Run;
+    procedure onMouseUp;
+    procedure onMouseDown;
+    
+  end;
+  
+constructor MeshExample.Create();
+var
+  rows: Integer;
+  cols: Integer;
+  startX: Number;
+  startY: Number;
+  spacing: Number;
+  currX: Number;
+  currY: Number;
+  n, j : Integer;
+  p2   : Particle;
+  i    : Integer;
+  p1   : Particle;
+  s0   : LineSurface;
+begin
+		engine := DynamicsEngine.Create();
+
+		engine.setDamping(1.0);
+		engine.setGravity(0.0, 0.6);
+		engine.setSurfaceBounce(0.1);
+		engine.setSurfaceFriction(0.25);
+
+		isDrag := False;
+
+		rows := 5;
+		cols := 20;
+		startX := 180;
+		startY := 20;
+		spacing := 12;
+
+		currX := startX;
+		currY := startY;
+		for n := 0 to rows - 1 do
+		begin
+			for j := 0 to cols - 1 do
+			begin
+				// add a little noise
+				currY := currY + Math.random();
+				currX := currX + Math.random();
+
+				engine.addPrimitive(RectangleParticle.Create(currX, currY, 1, 1));
+				currX := currX + spacing;
+      end;
+			currX := startX;
+			currY := currY + spacing;
+    end;
+    
+		// vertical constraints
+		p2 := nil;
+		for n := 0 to cols - 1 do
+		begin
+			for j := 0 to rows - 1 do
+			begin
+
+				i := cols * j + n;
+				p1 := Particle(engine.primitives[i]);
+
+				if (p2 <> nil) then
+				begin
+					engine.addConstraint(SpringConstraint.Create(p1, p2));
+        end;
+				p2 := p1;
+      end;
+			p2 := nil;
+    end;
+
+		// horizontal constraints
+		for i := 0 to Integer(engine.primitives.length) - 1 do
+    begin
+
+			p1 := Particle(engine.primitives[i]);
+			if (p2 <> nil) and (i mod cols <> 0) then
+			begin
+				engine.addConstraint(SpringConstraint.Create(p1, p2));
+      end;
+			p2 := p1;
+    end;
+
+
+		// surfaces
+		s0 := LineSurface.Create(0, 350, 675, 350);
+		s0.setCollisionDepth(50);
+		engine.addSurface(s0);
+
+		engine.paintSurfaces();
+end;
+
+
+procedure MeshExample.run();
+begin
+
+		if (not isDrag) then
+		begin
+			engine.primitives[0].pin();
+			engine.primitives[19].pin();
+    end;
+		engine.timeStep();
+		engine.paintConstraints();
+		
+		Inc(numFrames);
+		fps.Text := 'FPS: ' + FloatToStr(Math.Round(numFrames / ((getTimer() - startTime) / 1000)));
+end;
+
+procedure MeshExample.onMouseUp();
+begin
+		isDrag := false;
+end;
+
+procedure MeshExample.onMouseDown();
+begin
+		isDrag := true;
+end;
+
+
+var
+  c: MeshExample;
+begin
+  c := MeshExample.Create();
+  Mouse.addListener(c);
+  
+  fps := TextField.Create(_root, 'fps', _root.getNextHighestDepth(), 0, 0, 100, 21);
+  fps.Text := 'FPS: 40';
+  startTime := getTimer();
+  numFrames := 0;
+  
+  _root.onEnterFrame := c.run;
+end.

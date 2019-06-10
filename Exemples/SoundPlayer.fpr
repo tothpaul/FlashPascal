@@ -1,0 +1,17 @@
+program SoundPlayer;
+
+{$FRAME_WIDTH 550}
+{$FRAME_HEIGHT 400}
+{$FRAME_RATE 12}
+{$BACKGROUND $FFFFFF}
+
+uses
+  Flash8;
+
+var
+  player: Sound;
+begin
+  player := Sound.Create();
+  player.loadSound('son.mp3');
+  player.start();
+end.

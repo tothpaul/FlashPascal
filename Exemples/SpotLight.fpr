@@ -1,0 +1,156 @@
+program SpotLight;
+
+{$FRAME_WIDTH 640}
+{$FRAME_HEIGHT 480}
+{$FRAME_RATE 25}
+{$BACKGROUND 0}
+
+uses
+  Flash8;
+
+type
+  TLevel = class(MovieClip)
+    constructor Create;
+    procedure wall(x1, y1, x2, y2: Number);
+  end;
+
+  TMask = class(MovieClip)
+    constructor Create(Parent: MovieClip);
+    procedure Draw;
+    procedure arc(p1, p2: Point);
+  end;
+
+  TSpot = class(MovieClip)
+    Org : Point;
+    Mask: TMask;
+    Holl: MovieClip;
+    constructor Create;
+    procedure onMouseMove; override;
+  end;
+
+const
+  radius = 200;
+  shadow = radius * 1.5;
+
+  walls : array of array of Integer=(
+   ( 40, 40,  40, 110),
+   (200, 40, 200, 400),
+   (100,150, 200, 150),
+   (300, 40, 500,  40),
+   (300, 80, 500,  80),
+   (500,200, 500, 300),
+   (100,350, 200, 350),
+   (350,300, 500, 400),
+   (350,300, 300, 400),
+   ( 40,200, 150, 200),
+   (150,200, 150, 300),
+   ( 40,300, 150, 300),
+   ( 40,300,  40, 200)
+  );
+
+constructor TLevel.Create;
+var
+  i: Integer;
+begin
+  inherited Create(_root, 'level', 10);
+  lineStyle(5, clRed);
+  for i := Low(walls) to High(walls) do
+    wall(walls[i,0], walls[i,1], walls[i,2], walls[i,3]);
+end;
+
+procedure TLevel.wall(x1, y1, x2, y2: Number);
+begin
+  moveTo(x1, y1);
+  lineTo(x2, y2);
+end;
+
+constructor TMask.Create(Parent: MovieClip);
+begin
+  inherited Create(parent, 'mask', 1);
+  Draw();
+end;
+
+procedure TMask.Draw;
+var
+  i: Integer;
+  a: Number;
+  p1,p2: Point;
+  c1,c2: Point;
+  m: Matrix;
+begin
+  clear();
+
+  p1 := Point.Create();
+  p2 := Point.Create();
+  for i := Low(walls) to High(walls) do
+  begin
+    p1.x := walls[i, 0] - _parent._x;
+    p1.y := walls[i, 1] - _parent._y;
+    p2.x := walls[i, 2] - _parent._x;
+    p2.y := walls[i, 3] - _parent._y;
+    if (p1.length <= shadow) or (p2.length <= shadow) then
+    begin
+      c1 := p1.clone;
+      c1.normalize(shadow);
+      c2 := p2.clone;
+      c2.normalize(shadow);
+
+      beginFill(clBlack);
+      moveTo(p1.x, p1.y);
+      lineTo(p2.x, p2.y);
+      lineTo(c2.x, c2.y);
+      arc(c2, c1);
+      endFill();
+    end;
+  end;
+end;
+
+procedure TMask.arc(p1, p2: Point);
+var
+  d: Number;
+  p: Point;
+begin
+  while Point.distance(p1, p2) > shadow do
+  begin
+    p := Point.interpolate(p1, p2, 0.5);
+    p.normalize(shadow);
+    arc(p1, p);
+    p1 := p;
+  end;
+  lineTo(p2.x, p2.y);
+end;
+
+constructor TSpot.Create;
+var
+  m: Matrix;
+  i: Integer;
+  a: Number;
+begin
+  inherited Create(_root, 'spot', 1);
+  _x := Stage.width / 2;
+  _y := Stage.height / 2;
+  m := Matrix.Create();
+  m.createGradientBox(2*radius, 2*radius, 0, -radius, -radius);
+  beginGradientFill('radial',[clWhite, clBlack],[100,100],[0,255],m);
+  moveTo(radius, 0);
+  for i := 0 to 40 do
+  begin
+    a := 2 * Math.PI * i / 40;
+    lineTo(radius * cos(a), radius * sin(a));
+  end;
+  endFill;
+  Mask := TMask.Create(Self);
+end;
+
+
+procedure TSpot.onMouseMove;
+begin
+  _x := _root._xmouse;
+  _y := _root._ymouse;
+  Mask.Draw();
+end;
+
+begin
+  TLevel.Create;
+  TSpot.Create;
+end.

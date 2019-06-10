@@ -1,0 +1,101 @@
+program Events;
+
+{
+  Jusque FlashPascal 12.06.25, les événements sont déclarés sous la forme:
+  
+    property onPress: procedure of object
+    
+  A partir de la version 12.07.02, on peut les déclarer comme des méthodes virtuelles
+  
+    procedure onPress; virtual;
+    
+  La procédure peut être surchargée avec un override (cf Button1) qui affecte toutes les instances
+  de cette nouvelle classe, ou remplacée par une affectation (cf Button2 ou 3) qui impacte uniquement
+  l'instance concernée.
+  
+  La méthode affectée à la méthode virtuelle peut avoir un paramètre supplémentaire Sender qui pointe
+  sur l'objet invoquant la méthode (cf Button3)
+
+}
+
+uses
+  Flash8;
+  
+type
+// Classe de base pour cet exemple
+  TButton = class(MovieClip)
+    Caption: TextField;
+    constructor Create(Name: string; x, y: Integer);
+  end;
+  
+// Première méthode: surcharge de la méthode virtuelle onPress
+  TButton1 = class(TButton)
+    procedure onPress; override;
+  end;
+  
+  TButton2 = class(TButton)
+// Deuxième méthode, affectation d'une méthode à la méthode virtuelle
+    procedure onClick2;
+// Troisième méthode avec un paramètre Sender (à placer en premier le cas échéant)
+    procedure onClick3(Sender: TObject);
+  end;
+  
+var
+  Format : TextFormat;
+  Label  : TextField;
+  Button1: TButton1;
+  Button2: TButton2;
+  Button3: TButton2;
+  
+constructor TButton.Create(Name: string; x, y: Integer);
+begin
+  inherited Create(_root, Name, _root.getNextHighestDepth);
+  _x := x;
+  _y := y;
+  Caption := TextField.Create(Self, Name, getNextHighestDepth, 0, 0, 100, 21);
+  with Caption do
+  begin
+    setNewTextFormat(Format);
+    Text := Name;
+    Border := True;
+    background := True;
+    backgroundColor := $e0e0e0;
+    selectable := False;
+  end;
+end;
+
+procedure TButton1.onPress;
+begin
+  Label.Text := 'clic sur ' + _name;
+end;
+
+procedure TButton2.onClick2;
+begin
+  Label.Text := 'clic sur ' + _name;
+end;
+
+procedure TButton2.onClick3(Sender: TObject);
+begin
+  Label.Text := 'clic sur ' + TButton(Sender)._name + ' depuis ' + _name;
+end;
+
+begin
+  Format := TextFormat.Create('Arial', 12);
+  Format.align := 'center';
+  
+  Label := TextField.Create(_root, '', _root.getNextHighestDepth, 10, 10, 200, 21);
+  Label.setNewTextFormat(Format);
+  Label.Text := 'Cliquez sur un bouton';
+  
+// Dans Button1, onPress est surchargé
+  Button1 := TButton1.Create('Button1', 10, 40);
+
+// Dans Button2, on lui affectue une méthode objet (comme pour une propriété)
+  Button2 := TButton2.Create('Button2', 10, 70);
+  Button2.onPress := Button2.onClick2;
+  
+// Dans Button3, on utilise une méthode avec un paramètre Sender
+  Button3 := TButton2.Create('Button3', 10, 100);
+// le paramètre Sender permet de traiter l'événement dans un autre objet
+  Button3.onPress := Button2.onClick3;
+end.

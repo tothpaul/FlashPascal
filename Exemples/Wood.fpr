@@ -1,0 +1,121 @@
+program Wood;
+
+{
+  Démonstration des possibilité de BitmapData
+  (c)2012 Execute SARL
+  
+  d'après la texture 'Wood' de NeoTextureEdit
+  http://sourceforge.net/projects/neotextureedit/
+  
+}
+
+{$FRAME_WIDTH 788}
+{$FRAME_HEIGHT 532}
+{$FRAME_RATE 12}
+{$BACKGROUND 0}
+
+uses
+  Flash8;
+  
+procedure emboss(b: BitmapData);
+begin
+  b.applyFilter(
+    b, b.rectangle, Point.Create(0, 0),
+    ConvolutionFilter.Create(
+      3, 3, [
+        -2, -1, 0,
+        -1,  1, 1,
+         0,  1, 2
+      ], 1
+    )
+  );
+end;
+
+var
+  b1, b2, b3, b4, b5, b6: BitmapData;
+  
+begin
+// création de deux bitmaps
+  b1 := BitmapData.Create(256, 256);
+  b2 := BitmapData.Create(256, 256);
+// application d'un bruit de Perlin
+  b1.perlinNoise( 3, 150, 4, 123, False, True, 0, True);
+  b2.perlinNoise(30, 200, 2, 456, False, True, 0, True);
+
+// Combiner les deux, b2 sert de déplacement dans b1
+  b3 := b1.clone();
+  b3.applyFilter(
+    b1, b1.rectangle, Point.Create(0, 0),
+    DisplacementMapFilter.Create(b2, Point.Create(0, 0), 1, 1, 50, 0, 'wrap')
+  );
+  
+// on ajoute de la couleur dans les tons "bois"
+  b4 := b3.clone();
+  b4.applyFilter(
+    b4, b4.rectangle, Point.Create(0, 0),
+    ColorMatrixFilter.Create([
+    2/3,  0, 0, 0,64,
+      0,1/2, 0, 0, 0,
+      0,  0, 0, 0, 0,
+      0,  0, 0, 1, 0
+    ])
+  );
+  
+// création d'une série de bandes pour donner un effet "planche"
+  b5 := BitmapData.Create(256,256, False, 0);
+  b5.fillRect(Rectangle.Create(  0, 0, 31, 256),$FFDA793D);
+  b5.fillRect(Rectangle.Create( 32, 0, 31, 256),$FFD56826);
+  b5.fillRect(Rectangle.Create( 64, 0, 31, 256),$FF5D250D);
+  b5.fillRect(Rectangle.Create( 96, 0, 31, 256),$FF944719);
+  b5.fillRect(Rectangle.Create(128, 0, 31, 256),$FF672B0F);
+  b5.fillRect(Rectangle.Create(160, 0, 31, 256),$FF4C2113);
+  b5.fillRect(Rectangle.Create(192, 0, 31, 256),$FF6D2E10);
+  b5.fillRect(Rectangle.Create(224, 0, 31, 256),$FF944719);
+  
+// on devrait appliquer un "emboss" sur b4 mais le résultat n'est pas très joli
+//  emboss(b4);
+  emboss(b5);
+
+// combiner les deux pour obtenir l'effet final
+  b6 := b4.clone;
+  b6.merge(b5, b5.rectangle, Point.Create(0, 0), 128, 128, 128, 128);
+  
+// on affiche simplement les différents bitmaps
+  with _root.createEmptyMovieClip('', 1) do
+  begin
+    attachBitmap(b1, 1);
+    _x := 5;
+    _y := 5;
+  end;
+  with _root.createEmptyMovieClip('', 2) do
+  begin
+    attachBitmap(b2, 1);
+    _x := 266;
+    _y := 5;
+  end;
+  with _root.createEmptyMovieClip('', 3) do
+  begin
+    attachBitmap(b3, 1);
+    _x := 528;
+    _y := 5;
+  end;
+  with _root.createEmptyMovieClip('', 4) do
+  begin
+    attachBitmap(b4, 1);
+    _x := 5;
+    _y := 266;
+  end;
+  with _root.createEmptyMovieClip('', 5) do
+  begin
+    attachBitmap(b5, 1);
+    _x := 266;
+    _y := 266;
+  end;
+  with _root.createEmptyMovieClip('', 6) do
+  begin
+    attachBitmap(b6, 1);
+    _x := 528;
+    _y := 266;
+  end;
+
+end.
