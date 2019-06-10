@@ -8,6 +8,8 @@ the application was designed with Delphi 6 ! so do not expect to build this appl
 
 If you have Delphi 6 or 7 (maybe 5), you can build the application from the command line with Build.bat by adjusting the Delphi "bin" path (C:\Borland\Delphi6\Bin by default)
 
-there's already a website about FlashPascal so you can [visit it](http://flashpascal.execute.fr) for more informations.
+there's already a website about FlashPascal so you can [visit it](http://flashpascal.execute.re) for more informations.
+
+![flashpascal](http://flashpascal.execute.re/ide.png)
 
 My new compiler project is [APKPascal](https://github.com/tothpaul/APKPascal), a Pascal compiler for Dalvik, the Android byte-code !
